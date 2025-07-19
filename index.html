@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoBeauty AI Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and ReactDOM CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel CDN for JSX transformation in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Custom styles for the Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Main App Component
+        const App = () => {
+            // State to manage camera stream, scan status, and results
+            const [stream, setStream] = React.useState(null);
+            const [isScanning, setIsScanning] = React.useState(false);
+            const [scanResult, setScanResult] = React.useState(null);
+            const videoRef = React.useRef(null);
+            const canvasRef = React.useRef(null);
+            const [message, setMessage] = React.useState(''); // For user messages like camera access errors
+
+            // Function to start camera stream
+            const startCamera = async () => {
+                setMessage(''); // Clear previous messages
+                try {
+                    // Request access to the user's camera
+                    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    setStream(mediaStream);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = mediaStream;
+                        videoRef.current.play(); // Start playing the video stream
+                    }
+                } catch (err) {
+                    console.error("Error accessing camera: ", err);
+                    setMessage("Error: Could not access camera. Please ensure camera permissions are granted.");
+                }
+            };
+
+            // Function to stop camera stream
+            const stopCamera = () => {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop()); // Stop all tracks in the stream
+                    setStream(null);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = null; // Clear video source
+                    }
+                }
+            };
+
+            // Effect to start camera when component mounts and clean up when unmounts
+            React.useEffect(() => {
+                startCamera();
+                // Cleanup function to stop camera when component unmounts
+                return () => {
+                    stopCamera();
+                };
+            }, []); // Empty dependency array means this runs once on mount and once on unmount
+
+            // Function to simulate AI/ML diagnosis and recommendations
+            const simulateDiagnosis = (imageDataUrl) => {
+                // Simulate different skin/hair types and environmental impacts
+                const skinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"];
+                const hairTypes = ["Normal", "Dry", "Oily", "Fine", "Thick", "Damaged"];
+                const environmentalImpacts = [
+                    "Moderate sun exposure, urban pollution.",
+                    "Low humidity, indoor environment.",
+                    "High humidity, outdoor activities.",
+                    "Seasonal changes, chemical exposure."
+                ];
+
+                // Randomly pick a diagnosis
+                const randomSkin = skinTypes[Math.floor(Math.random() * skinTypes.length)];
+                const randomHair = hairTypes[Math.floor(Math.random() * hairTypes.length)];
+                const randomEnv = environmentalImpacts[Math.floor(Math.random() * environmentalImpacts.length)];
+
+                // Simulated L'Oréal product recommendations (eco-conscious)
+                const products = [
+                    { name: "L'Oréal Eco-Hydrate Serum", type: "Skin", format: "Refillable Bottle", carbonSaved: "150g CO2", waterSaved: "5L", plasticReduced: "20g" },
+                    { name: "L'Oréal Pure Scalp Cleanser", type: "Scalp", format: "Reusable Pouch", carbonSaved: "100g CO2", waterSaved: "3L", plasticReduced: "15g" },
+                    { name: "L'Oréal Green Glow Moisturizer", type: "Skin", format: "Refill Pod", carbonSaved: "120g CO2", waterSaved: "4L", plasticReduced: "18g" },
+                    { name: "L'Oréal Botanical Hair Mask", type: "Hair", format: "Compostable Jar", carbonSaved: "90g CO2", waterSaved: "2L", plasticReduced: "10g" },
+                    { name: "L'Oréal Sustainable Shine Conditioner", type: "Hair", format: "Refillable Tube", carbonSaved: "110g CO2", waterSaved: "3.5L", plasticReduced: "16g" },
+                ];
+
+                // Filter products based on simulated skin/hair type (simplified for demo)
+                const recommendedProducts = products.filter(p =>
+                    (randomSkin.includes(p.type) || randomHair.includes(p.type) || p.type === undefined) // Simple type matching
+                ).slice(0, 3); // Limit to 3 recommendations
+
+                // Simulate environmental impact savings
+                const totalCarbonSaved = (Math.random() * 500 + 100).toFixed(0); // 100-600g
+                const totalWaterSaved = (Math.random() * 10 + 2).toFixed(0); // 2-12L
+                const totalPlasticReduced = (Math.random() * 30 + 5).toFixed(0); // 5-35g
+
+                return {
+                    diagnosis: {
+                        skin: randomSkin,
+                        hair: randomHair,
+                        environmentalImpact: randomEnv,
+                    },
+                    recommendations: recommendedProducts,
+                    environmentalSavings: {
+                        carbon: `${totalCarbonSaved}g CO2`,
+                        water: `${totalWaterSaved}L`,
+                        plastic: `${totalPlasticReduced}g`,
+                    },
+                    scannedImage: imageDataUrl, // Store the captured image
+                };
+            };
+
+            // Function to handle the "Scan" button click
+            const handleScan = () => {
+                if (videoRef.current && canvasRef.current) {
+                    setIsScanning(true);
+                    const video = videoRef.current;
+                    const canvas = canvasRef.current;
+                    const context = canvas.getContext('2d');
+
+                    // Set canvas dimensions to match video feed
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    // Draw the current video frame onto the canvas
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Get the image data URL from the canvas
+                    const imageDataUrl = canvas.toDataURL('image/png');
+
+                    // Simulate the diagnosis after a short delay
+                    setTimeout(() => {
+                        const result = simulateDiagnosis(imageDataUrl);
+                        setScanResult(result);
+                        setIsScanning(false);
+                        stopCamera(); // Stop camera after scan
+                    }, 2000); // Simulate processing time
+                } else {
+                    setMessage("Camera not ready. Please ensure camera access is granted.");
+                }
+            };
+
+            // Function to reset the scan and allow a new one
+            const resetScan = () => {
+                setScanResult(null);
+                setIsScanning(false);
+                startCamera(); // Restart camera for a new scan
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col items-center py-8 font-sans">
+                    {/* Header */}
+                    <header className="w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-8 text-center">
+                        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
+                            EcoBeauty AI
+                        </h1>
+                        <p className="text-xl text-gray-600">
+                            Your Personal AI/ML Skin & Hair Consultant
+                        </p>
+                    </header>
+
+                    {/* Main Content Area */}
+                    <main className="w-full max-w-4xl bg-white p-8 rounded-xl shadow-lg flex flex-col items-center">
+                        {/* Camera Scan Section */}
+                        {!scanResult ? (
+                            <section className="w-full flex flex-col items-center">
+                                <h2 className="text-3xl font-bold text-blue-700 mb-6">Scan Your Face/Scalp/Hair</h2>
+                                {message && (
+                                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md mb-4 w-full text-center">
+                                        {message}
+                                    </div>
+                                )}
+                                <div className="relative w-full max-w-md bg-gray-200 rounded-lg overflow-hidden shadow-inner aspect-video">
+                                    {/* Video feed for camera */}
+                                    <video
+                                        ref={videoRef}
+                                        className="w-full h-full object-cover rounded-lg"
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        style={{ transform: 'scaleX(-1)' }} // Mirror the video for selfie-like view
+                                    ></video>
+                                    {/* Canvas for capturing frame (hidden) */}
+                                    <canvas ref={canvasRef} className="hidden"></canvas>
+                                    {isScanning && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white text-xl font-semibold">
+                                            <svg className="animate-spin h-8 w-8 text-white mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Analyzing...
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleScan}
+                                    disabled={!stream || isScanning}
+                                    className={`mt-8 px-8 py-3 text-xl font-semibold rounded-full shadow-lg transition duration-300
+                                        ${stream && !isScanning ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-400 text-gray-700 cursor-not-allowed'}
+                                    `}
+                                >
+                                    {isScanning ? 'Scanning...' : 'Start Scan'}
+                                </button>
+                            </section>
+                        ) : (
+                            // Scan Results Section
+                            <section className="w-full">
+                                <h2 className="text-3xl font-bold text-blue-700 mb-6 text-center">Your Personalized Report</h2>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                    {/* Scanned Image */}
+                                    <div className="bg-gray-50 p-6 rounded-lg shadow-md flex flex-col items-center">
+                                        <h3 className="text-xl font-semibold text-gray-800 mb-4">Scanned Image</h3>
+                                        <img
+                                            src={scanResult.scannedImage}
+                                            alt="Scanned Face/Scalp/Hair"
+                                            className="w-full max-w-xs rounded-lg shadow-md border-2 border-gray-200"
+                                        />
+                                    </div>
+
+                                    {/* Diagnosis Summary */}
+                                    <div className="bg-gray-50 p-6 rounded-lg shadow-md">
+                                        <h3 className="text-xl font-semibold text-gray-800 mb-4">Diagnosis Summary</h3>
+                                        <p className="mb-2"><strong className="text-blue-600">Skin Type:</strong> {scanResult.diagnosis.skin}</p>
+                                        <p className="mb-2"><strong className="text-blue-600">Hair/Scalp Type:</strong> {scanResult.diagnosis.hair}</p>
+                                        <p><strong className="text-blue-600">Environmental Impact:</strong> {scanResult.diagnosis.environmentalImpact}</p>
+                                    </div>
+                                </div>
+
+                                {/* Product Recommendations */}
+                                <div className="bg-blue-50 p-6 rounded-lg shadow-md mb-8">
+                                    <h3 className="text-xl font-semibold text-blue-700 mb-4">Recommended Eco-Conscious L'Oréal Products</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {scanResult.recommendations.map((product, index) => (
+                                            <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-blue-200">
+                                                <h4 className="font-bold text-lg text-gray-900">{product.name}</h4>
+                                                <p className="text-sm text-gray-600 mb-1">Type: {product.type}</p>
+                                                <p className="text-sm text-gray-600 mb-2">Format: <span className="font-medium text-green-700">{product.format}</span></p>
+                                                <p className="text-xs text-gray-500">
+                                                    Estimated Savings: {product.carbonSaved}, {product.waterSaved}, {product.plasticReduced}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Environmental Impact Section */}
+                                <div className="bg-green-50 p-6 rounded-lg shadow-md mb-8">
+                                    <h3 className="text-xl font-semibold text-green-700 mb-4">Your Environmental Impact</h3>
+                                    <p className="text-lg mb-2">By choosing sustainable options, you could save:</p>
+                                    <ul className="list-disc list-inside text-gray-700">
+                                        <li><strong className="text-green-600">{scanResult.environmentalSavings.carbon}</strong> of Carbon Emissions</li>
+                                        <li><strong className="text-green-600">{scanResult.environmentalSavings.water}</strong> of Water</li>
+                                        <li><strong className="text-green-600">{scanResult.environmentalSavings.plastic}</strong> of Plastic Waste</li>
+                                    </ul>
+                                    <p className="mt-4 text-sm text-gray-500">
+                                        *These are simulated estimates based on eco-conscious choices.
+                                    </p>
+                                </div>
+
+                                {/* Additional Sustainable Features */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                    <div className="bg-purple-50 p-6 rounded-lg shadow-md">
+                                        <h3 className="text-xl font-semibold text-purple-700 mb-4">Refill Reminders & Incentives</h3>
+                                        <p className="text-gray-700 mb-2">
+                                            Get timely notifications when your refillable products are running low.
+                                        </p>
+                                        <p className="text-gray-700">
+                                            Earn loyalty points or discounts for returning empty packs for recycling or refilling!
+                                        </p>
+                                    </div>
+                                    <div className="bg-yellow-50 p-6 rounded-lg shadow-md">
+                                        <h3 className="text-xl font-semibold text-yellow-700 mb-4">DIY Sustainable Routines</h3>
+                                        <p className="text-gray-700 mb-2">
+                                            Discover simple, effective DIY beauty recipes using natural ingredients.
+                                        </p>
+                                        <p className="text-gray-700">
+                                            Reduce waste and customize your routine with expert-curated sustainable tips.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="text-center">
+                                    <button
+                                        onClick={resetScan}
+                                        className="mt-8 px-8 py-3 text-xl font-semibold rounded-full shadow-lg transition duration-300 bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                        Scan Again
+                                    </button>
+                                </div>
+                            </section>
+                        )}
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="w-full max-w-4xl bg-gray-800 text-white p-6 rounded-xl shadow-lg mt-8 text-center text-sm">
+                        <p>&copy; 2025 EcoBeauty AI. All rights reserved.</p>
+                        <p className="mt-2 text-gray-400">
+                            This platform provides simulated AI/ML diagnosis and recommendations for demonstration purposes.
+                        </p>
+                    </footer>
+                </div>
+            );
+        };
+
+        // Render the App component into the 'root' div
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
